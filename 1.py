@@ -102,3 +102,28 @@ with torch.no_grad():
     test_mel = audio_to_mel(load_audio(test_file)).unsqueeze(0).to(DEVICE) # [1, 1, 128, 128]
     output = model(test_mel)
     print(f"Predviđeno: {output.argmax(1).item()} | Stvarno: {person_folders.index(test_folder)}")
+
+
+'''
+Epoch 1/20 | Loss: 4.3670 | Acc: 0.00%
+Epoch 2/20 | Loss: 22.0332 | Acc: 2.50%
+Epoch 3/20 | Loss: 19.4611 | Acc: 2.50%
+Epoch 4/20 | Loss: 15.3314 | Acc: 2.50%
+Epoch 5/20 | Loss: 13.7972 | Acc: 2.50%
+Epoch 6/20 | Loss: 11.3848 | Acc: 3.75%
+Epoch 7/20 | Loss: 8.3886 | Acc: 6.25%
+Epoch 8/20 | Loss: 6.5404 | Acc: 12.50%
+Epoch 9/20 | Loss: 5.6813 | Acc: 13.75%
+Epoch 10/20 | Loss: 5.1559 | Acc: 8.75%
+Epoch 11/20 | Loss: 4.5011 | Acc: 13.75%
+Epoch 12/20 | Loss: 3.8578 | Acc: 16.25%
+Epoch 13/20 | Loss: 3.2917 | Acc: 20.00%
+Epoch 14/20 | Loss: 2.8960 | Acc: 30.00%
+Epoch 15/20 | Loss: 2.8033 | Acc: 31.25%
+Epoch 16/20 | Loss: 2.8472 | Acc: 26.25%
+Epoch 17/20 | Loss: 2.8352 | Acc: 28.75%
+Epoch 18/20 | Loss: 2.7499 | Acc: 28.75%
+Epoch 19/20 | Loss: 2.5813 | Acc: 31.25%
+Epoch 20/20 | Loss: 2.3817 | Acc: 32.50%
+Predviđeno: 24 | Stvarno: 38
+'''
