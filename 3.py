@@ -1,5 +1,6 @@
 # add augmentacija
 # eksperimentirat s layerima i veličinon modela
+# vjerojatno smanjit :D
 
 import torch
 import torch.nn as nn
