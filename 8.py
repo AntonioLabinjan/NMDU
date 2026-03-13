@@ -196,6 +196,74 @@ plt.savefig(os.path.join(RUN_DIR, "confusion_matrix.png"))
 
 print(f"Gotovo!!")
 
+Ep 001 | Train: 14.6% | Val: 12.1% | Loss V: 3.4010 | LR: 0.000800                          
+Ep 002 | Train: 28.5% | Val: 24.4% | Loss V: 3.0709 | LR: 0.000800                          
+Ep 003 | Train: 36.9% | Val: 26.3% | Loss V: 2.9670 | LR: 0.000800                          
+Ep 004 | Train: 45.8% | Val: 31.4% | Loss V: 2.7243 | LR: 0.000800                          
+Ep 005 | Train: 54.4% | Val: 29.0% | Loss V: 2.9378 | LR: 0.000800                          
+Ep 006 | Train: 60.5% | Val: 41.9% | Loss V: 2.3422 | LR: 0.000800                          
+Ep 007 | Train: 64.6% | Val: 35.1% | Loss V: 2.6510 | LR: 0.000800                          
+Ep 008 | Train: 69.9% | Val: 52.6% | Loss V: 2.1804 | LR: 0.000800                          
+Ep 009 | Train: 72.0% | Val: 58.5% | Loss V: 1.9654 | LR: 0.000800                          
+Ep 010 | Train: 75.9% | Val: 50.5% | Loss V: 2.3197 | LR: 0.000800                          
+Ep 011 | Train: 77.9% | Val: 52.4% | Loss V: 2.2111 | LR: 0.000800                          
+Ep 012 | Train: 80.1% | Val: 53.8% | Loss V: 2.2466 | LR: 0.000800                          
+Ep 013 | Train: 81.1% | Val: 64.3% | Loss V: 1.7933 | LR: 0.000800                          
+Ep 014 | Train: 82.3% | Val: 58.5% | Loss V: 1.9293 | LR: 0.000800                          
+Ep 015 | Train: 83.4% | Val: 61.8% | Loss V: 1.8365 | LR: 0.000800                          
+Ep 016 | Train: 86.3% | Val: 53.0% | Loss V: 2.0928 | LR: 0.000800                          
+Ep 017 | Train: 86.3% | Val: 69.2% | Loss V: 1.7087 | LR: 0.000800                          
+Ep 018 | Train: 87.8% | Val: 74.5% | Loss V: 1.6128 | LR: 0.000800                          
+Ep 019 | Train: 88.2% | Val: 60.8% | Loss V: 1.8934 | LR: 0.000800                          
+Ep 020 | Train: 88.4% | Val: 65.7% | Loss V: 1.7828 | LR: 0.000800                          
+Ep 021 | Train: 88.8% | Val: 60.4% | Loss V: 2.0293 | LR: 0.000800                          
+Ep 022 | Train: 89.9% | Val: 59.8% | Loss V: 1.9440 | LR: 0.000800                          
+Ep 023 | Train: 91.1% | Val: 69.8% | Loss V: 1.6581 | LR: 0.000800                          
+Ep 024 | Train: 91.8% | Val: 80.5% | Loss V: 1.3644 | LR: 0.000800                          
+Ep 025 | Train: 91.6% | Val: 66.7% | Loss V: 1.7570 | LR: 0.000800                          
+Ep 026 | Train: 92.4% | Val: 81.7% | Loss V: 1.4400 | LR: 0.000800                          
+Ep 027 | Train: 92.8% | Val: 79.5% | Loss V: 1.3911 | LR: 0.000800                          
+Ep 028 | Train: 93.3% | Val: 69.2% | Loss V: 1.7165 | LR: 0.000800                          
+Ep 029 | Train: 93.3% | Val: 63.2% | Loss V: 1.8791 | LR: 0.000800                          
+Ep 030 | Train: 94.0% | Val: 75.8% | Loss V: 1.5267 | LR: 0.000400                          
+Ep 031 | Train: 95.3% | Val: 78.9% | Loss V: 1.4415 | LR: 0.000400                          
+Ep 032 | Train: 96.0% | Val: 80.1% | Loss V: 1.3739 | LR: 0.000400                          
+Ep 033 | Train: 96.6% | Val: 77.8% | Loss V: 1.4351 | LR: 0.000400                          
+Ep 034 | Train: 96.2% | Val: 76.2% | Loss V: 1.4492 | LR: 0.000400                          
+Ep 035 | Train: 96.6% | Val: 80.5% | Loss V: 1.3941 | LR: 0.000400                          
+Ep 036 | Train: 97.1% | Val: 80.9% | Loss V: 1.3880 | LR: 0.000200                          
+Ep 037 | Train: 97.3% | Val: 80.5% | Loss V: 1.3934 | LR: 0.000200                          
+Ep 038 | Train: 97.7% | Val: 81.3% | Loss V: 1.2907 | LR: 0.000200                          
+Ep 039 | Train: 97.7% | Val: 80.9% | Loss V: 1.3387 | LR: 0.000200                          
+Ep 040 | Train: 97.9% | Val: 79.7% | Loss V: 1.3719 | LR: 0.000200                          
+Ep 041 | Train: 97.5% | Val: 81.9% | Loss V: 1.3465 | LR: 0.000200                          
+Ep 042 | Train: 98.3% | Val: 81.7% | Loss V: 1.2915 | LR: 0.000200                          
+Ep 043 | Train: 97.6% | Val: 80.7% | Loss V: 1.3680 | LR: 0.000200                          
+Ep 044 | Train: 98.0% | Val: 83.0% | Loss V: 1.2855 | LR: 0.000200                          
+Ep 045 | Train: 98.0% | Val: 82.8% | Loss V: 1.3053 | LR: 0.000200                          
+Ep 046 | Train: 98.3% | Val: 80.3% | Loss V: 1.3910 | LR: 0.000200                          
+Ep 047 | Train: 98.3% | Val: 84.2% | Loss V: 1.2607 | LR: 0.000200                          
+Ep 048 | Train: 98.5% | Val: 84.2% | Loss V: 1.3129 | LR: 0.000200                          
+Ep 049 | Train: 98.3% | Val: 81.9% | Loss V: 1.3132 | LR: 0.000200                          
+Ep 050 | Train: 98.3% | Val: 83.4% | Loss V: 1.3008 | LR: 0.000200                          
+Ep 051 | Train: 98.2% | Val: 80.5% | Loss V: 1.3694 | LR: 0.000200                          
+Ep 052 | Train: 98.0% | Val: 78.2% | Loss V: 1.4114 | LR: 0.000200                          
+Ep 053 | Train: 98.4% | Val: 81.3% | Loss V: 1.3207 | LR: 0.000100                          
+Ep 054 | Train: 98.6% | Val: 81.9% | Loss V: 1.3031 | LR: 0.000100                          
+Ep 055 | Train: 98.7% | Val: 80.3% | Loss V: 1.3562 | LR: 0.000100                          
+Ep 056 | Train: 98.6% | Val: 79.1% | Loss V: 1.3676 | LR: 0.000100                          
+Ep 057 | Train: 98.6% | Val: 82.1% | Loss V: 1.3097 | LR: 0.000100                          
+Ep 058 | Train: 98.4% | Val: 80.3% | Loss V: 1.3528 | LR: 0.000100                          
+Ep 059 | Train: 98.9% | Val: 81.3% | Loss V: 1.3354 | LR: 0.000050                          
+Ep 060 | Train: 98.8% | Val: 81.9% | Loss V: 1.2912 | LR: 0.000050                          
+Ep 061 | Train: 98.8% | Val: 81.7% | Loss V: 1.2979 | LR: 0.000050                          
+Ep 062 | Train: 98.9% | Val: 81.1% | Loss V: 1.3205 | LR: 0.000050                          
+Ep 063 | Train: 98.8% | Val: 81.1% | Loss V: 1.3241 | LR: 0.000050                          
+Ep 064 | Train: 99.0% | Val: 81.5% | Loss V: 1.2785 | LR: 0.000050                          
+Ep 065 | Train: 99.1% | Val: 78.4% | Loss V: 1.3516 | LR: 0.000025                          
+Ep 066 | Train: 98.7% | Val: 80.7% | Loss V: 1.3258 | LR: 0.000025                          
+Ep 067 | Train: 99.0% | Val: 79.9% | Loss V: 1.3199 | LR: 0.000025 
+
 
               precision    recall  f1-score   support
 
