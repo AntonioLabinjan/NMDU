@@ -4,7 +4,6 @@ import torch.optim as optim
 import torchaudio
 import os
 import glob
-import json
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -35,7 +34,7 @@ def get_run_folder(base_name="run"):
     return run_dir
 
 RUN_DIR = get_run_folder()
-print(f"\n🚀 START: Class Weighted Training u {RUN_DIR}")
+print(f"\n🚀 START: Full Diagnostic Run in {RUN_DIR}")
 
 # --- MODEL (VoiceNetDeep) ---
 class VoiceNetDeep(nn.Module):
@@ -65,15 +64,14 @@ class VoiceNetDeep(nn.Module):
     def forward(self, x):
         return self.classifier(self.features(x))
 
-# --- OPTIMIZIRANI DATASET ---
+# --- OPTIMIZED DATASET ---
 class VoiceDataset(Dataset):
     def __init__(self, file_paths, labels, augment=False):
         self.file_paths = file_paths
         self.labels = labels
         self.augment = augment
         
-        # Inicijaliziramo transformacije jednom (UBRZANJE)
-        self.resample = None # Radimo dinamički ako sr nije 16k
+        # Initialize transforms once for speed
         self.mel_transform = torchaudio.transforms.MelSpectrogram(
             sample_rate=SAMPLE_RATE, n_mels=128, n_fft=1024, hop_length=512
         )
@@ -98,7 +96,6 @@ class VoiceDataset(Dataset):
             waveform = torch.roll(waveform, shift_val, dims=1)
             waveform = waveform + 0.002 * torch.randn_like(waveform)
 
-        # Koristimo već inicijalizirane transformacije
         mel_spec = self.mel_transform(waveform)
         mel_spec = self.db_transform(mel_spec)
         
@@ -113,7 +110,7 @@ class VoiceDataset(Dataset):
         mel_spec = (mel_spec - mel_spec.mean()) / (mel_spec.std() + 1e-7)
         return mel_spec, label
 
-# --- PRIPREMA PODATAKA ---
+# --- DATA PREPARATION ---
 person_folders = sorted(glob.glob(os.path.join(DATASET_DIR, "*")))
 class_names = [os.path.basename(f) for f in person_folders]
 
@@ -122,8 +119,7 @@ for label, folder in enumerate(person_folders):
     for f in glob.glob(os.path.join(folder, "**/*.wav"), recursive=True):
         all_files.append(f); all_labels.append(label)
 
-# Izračun Class Weightova (Balansiranje)
-# Ovo daje veći značaj klasama s manje uzoraka
+# Calculate Class Weights
 weights = compute_class_weight(class_weight='balanced', classes=np.unique(all_labels), y=all_labels)
 class_weights = torch.tensor(weights, dtype=torch.float).to(DEVICE)
 
@@ -134,13 +130,10 @@ train_loader = DataLoader(VoiceDataset(X_train_f, y_train, augment=True), batch_
 val_loader = DataLoader(VoiceDataset(X_val_f, y_val, augment=False), batch_size=BATCH_SIZE, num_workers=4)
 test_loader = DataLoader(VoiceDataset(X_test_f, y_test, augment=False), batch_size=BATCH_SIZE)
 
-# --- TRENING SETUP ---
+# --- TRAINING SETUP ---
 model = VoiceNetDeep(len(class_names)).to(DEVICE)
 optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-
-# NOVI LOSS: Koristi izračunate težine da popravi Recall na teškim klasama
 criterion = nn.CrossEntropyLoss(label_smoothing=0.1, weight=class_weights)
-
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, factor=0.5)
 
 history = {'t_loss': [], 'v_loss': [], 't_acc': [], 'v_acc': []}
@@ -150,7 +143,7 @@ patience_counter = 0
 for epoch in range(EPOCHS):
     model.train()
     t_loss, t_corr, t_total = 0, 0, 0
-    pbar = tqdm(train_loader, desc=f"Ep {epoch+1:03d}", leave=False)
+    pbar = tqdm(train_loader, desc=f"Epoch {epoch+1:03d}", leave=False)
     for bx, by in pbar:
         bx, by = bx.to(DEVICE), by.to(DEVICE)
         optimizer.zero_grad(); out = model(bx); loss = criterion(out, by)
@@ -170,7 +163,7 @@ for epoch in range(EPOCHS):
     history['t_loss'].append(tl); history['v_loss'].append(vl); history['t_acc'].append(ta); history['v_acc'].append(va)
     
     scheduler.step(vl)
-    print(f"Ep {epoch+1:03d} | Train: {ta:.1f}% | Val: {va:.1f}% | Loss V: {vl:.4f} | LR: {optimizer.param_groups[0]['lr']:.6f}")
+    print(f"Ep {epoch+1:03d} | Train Acc: {ta:.1f}% | Val Acc: {va:.1f}% | Val Loss: {vl:.4f} | LR: {optimizer.param_groups[0]['lr']:.6f}")
 
     if vl < best_v_loss:
         best_v_loss = vl
@@ -178,74 +171,97 @@ for epoch in range(EPOCHS):
         patience_counter = 0
     else:
         patience_counter += 1
-    
     if patience_counter >= EARLY_STOP_PATIENCE:
-        print("\n[!] Prekidamo - nema više napretka."); break
+        print("\n[!] Early stopping triggered.")
+        break
 
-# --- FINALNI REPORT ---
-# (Isti report kao i prije, on je savršen za analizu)
+# --- DIAGNOSTICS & RESULTS ---
+print(f"\n📊 Generating reports in {RUN_DIR}...")
+
+# 1. Training Curves
+plt.figure(figsize=(15, 5))
+plt.subplot(1, 2, 1)
+plt.plot(history['t_loss'], label='Train Loss', color='#1f77b4', lw=2)
+plt.plot(history['v_loss'], label='Val Loss', color='#ff7f0e', lw=2)
+plt.title('Training and Validation Loss')
+plt.xlabel('Epoch'); plt.ylabel('Loss'); plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.plot(history['t_acc'], label='Train Acc', color='#2ca02c', lw=2)
+plt.plot(history['v_acc'], label='Val Acc', color='#d62728', lw=2)
+plt.title('Training and Validation Accuracy')
+plt.xlabel('Epoch'); plt.ylabel('Accuracy %'); plt.legend()
+plt.tight_layout()
+plt.savefig(os.path.join(RUN_DIR, "training_metrics.png"))
+
+# 2. Confusion Matrix & Classification Report
 model.load_state_dict(torch.load(os.path.join(RUN_DIR, "best_model.pth")))
 model.eval()
-y_t, y_p = [], []
+y_true, y_pred = [], []
 with torch.no_grad():
     for bx, by in test_loader:
         out = model(bx.to(DEVICE))
-        y_p.extend(out.argmax(1).cpu().numpy()); y_t.extend(by.numpy())
+        y_pred.extend(out.argmax(1).cpu().numpy())
+        y_true.extend(by.numpy())
 
-with open(os.path.join(RUN_DIR, "report.txt"), "w") as f:
-    f.write(classification_report(y_t, y_p, target_names=class_names))
+with open(os.path.join(RUN_DIR, "detailed_report.txt"), "w") as f:
+    f.write("--- CLASSIFICATION REPORT ---\n")
+    f.write(classification_report(y_true, y_pred, target_names=class_names))
 
-cm = confusion_matrix(y_t, y_p)
-plt.figure(figsize=(16, 12))
-sns.heatmap(cm, annot=False, cmap='Blues', xticklabels=class_names, yticklabels=class_names)
+cm = confusion_matrix(y_true, y_pred)
+plt.figure(figsize=(20, 16))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
+plt.title('Confusion Matrix - Speaker Classification')
+plt.xlabel('Predicted Label'); plt.ylabel('True Label')
 plt.savefig(os.path.join(RUN_DIR, "confusion_matrix.png"))
 
-print(f"✅ Završeno. Provjeri report.txt da vidiš je li se id10299 popravio!")
+print(f"✅ FINISHED. Check the {RUN_DIR} folder for your results.")
 
 
+--- CLASSIFICATION REPORT ---
               precision    recall  f1-score   support
 
-     id10270       1.00      1.00      1.00        16
-     id10271       0.50      1.00      0.67         7
-     id10272       0.62      1.00      0.77         5
-     id10273       0.85      0.92      0.88        24
-     id10274       0.71      1.00      0.83         5
-     id10275       0.86      0.86      0.86         7
-     id10276       1.00      0.58      0.73        19
+     id10270       0.94      1.00      0.97        16
+     id10271       0.44      1.00      0.61         7
+     id10272       0.83      1.00      0.91         5
+     id10273       0.92      0.96      0.94        24
+     id10274       0.62      1.00      0.77         5
+     id10275       1.00      0.86      0.92         7
+     id10276       1.00      0.47      0.64        19
      id10277       0.71      0.83      0.77         6
-     id10278       0.94      0.79      0.86        19
-     id10279       0.86      1.00      0.92         6
-     id10280       0.71      0.83      0.77         6
-     id10281       0.70      0.88      0.78         8
+     id10278       1.00      0.74      0.85        19
+     id10279       0.67      1.00      0.80         6
+     id10280       1.00      0.83      0.91         6
+     id10281       0.78      0.88      0.82         8
      id10282       1.00      1.00      1.00         8
-     id10283       0.85      0.92      0.88        24
-     id10284       0.69      1.00      0.82         9
+     id10283       0.73      0.92      0.81        24
+     id10284       0.80      0.89      0.84         9
      id10285       0.91      1.00      0.95        10
-     id10286       1.00      0.87      0.93        15
-     id10287       0.67      1.00      0.80         4
+     id10286       1.00      1.00      1.00        15
+     id10287       0.50      1.00      0.67         4
      id10288       0.80      1.00      0.89         4
-     id10289       1.00      1.00      1.00         8
-     id10290       0.81      0.93      0.87        14
+     id10289       1.00      0.88      0.93         8
+     id10290       0.92      0.86      0.89        14
      id10291       0.88      1.00      0.93         7
-     id10292       0.93      1.00      0.96        27
-     id10293       1.00      0.90      0.95        20
+     id10292       0.93      0.96      0.95        27
+     id10293       1.00      0.95      0.97        20
      id10294       0.78      1.00      0.88        14
-     id10295       1.00      0.78      0.88         9
-     id10296       0.83      1.00      0.91        10
-     id10297       0.88      0.88      0.88         8
-     id10298       0.59      1.00      0.74        13
-     id10299       1.00      0.40      0.57         5
-     id10300       1.00      0.77      0.87        31
+     id10295       1.00      0.89      0.94         9
+     id10296       0.90      0.90      0.90        10
+     id10297       1.00      0.75      0.86         8
+     id10298       0.54      1.00      0.70        13
+     id10299       1.00      0.80      0.89         5
+     id10300       0.96      0.81      0.88        31
      id10301       0.80      1.00      0.89         4
-     id10302       0.86      0.35      0.50        17
+     id10302       0.88      0.41      0.56        17
      id10303       1.00      0.91      0.95        11
-     id10304       1.00      0.38      0.55        16
-     id10305       0.87      0.93      0.90        14
-     id10306       1.00      0.95      0.97        19
+     id10304       1.00      0.25      0.40        16
+     id10305       0.88      1.00      0.93        14
+     id10306       0.94      0.89      0.92        19
      id10307       1.00      1.00      1.00        16
      id10308       1.00      1.00      1.00         6
-     id10309       0.93      0.82      0.88        17
+     id10309       0.88      0.82      0.85        17
 
-    accuracy                           0.87       488
-   macro avg       0.86      0.89      0.85       488
-weighted avg       0.89      0.87      0.86       488
+    accuracy                           0.86       488
+   macro avg       0.87      0.89      0.86       488
+weighted avg       0.90      0.86      0.86       488
