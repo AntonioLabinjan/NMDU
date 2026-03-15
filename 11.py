@@ -1,4 +1,4 @@
-# NAS experiments
+# NAS experiments => we have a new best locally
 import torch
 import torch.nn as nn
 import torch.optim as optim
