@@ -86,30 +86,30 @@ class VoiceApp:
         return devices
 
     def setup_ui(self):
-        ttk.Label(self.root, text="Sustav Prepoznavanja Glasa v2", font=("Helvetica", 16, "bold")).pack(pady=10)
+        ttk.Label(self.root, text="Voice Rec", font=("Helvetica", 16, "bold")).pack(pady=10)
         
-        mic_frame = ttk.LabelFrame(self.root, text="Odabir Mikrofona")
+        mic_frame = ttk.LabelFrame(self.root, text="Choose a mic")
         mic_frame.pack(pady=5, fill="x", padx=20)
         self.mic_selector = ttk.Combobox(mic_frame, values=self.get_mic_devices(), state="readonly", width=50)
         self.mic_selector.pack(pady=10, padx=10)
         if self.get_mic_devices(): self.mic_selector.current(len(self.get_mic_devices())-1)
 
-        self.pred_label = ttk.Label(self.root, text="STATUS: ČEKAM...", font=("Helvetica(311)", 14), foreground="gray")
+        self.pred_label = ttk.Label(self.root, text="STATUS: WAITING...", font=("Helvetica(311)", 14), foreground="gray")
         self.pred_label.pack(pady=15)
 
-        settings_frame = ttk.LabelFrame(self.root, text="Postavke Pretrage")
+        settings_frame = ttk.LabelFrame(self.root, text="Search params")
         settings_frame.pack(pady=5, fill="x", padx=20)
         ttk.Label(settings_frame, text="Top-K:").grid(row=0, column=0, padx=10, pady=5)
         ttk.Entry(settings_frame, textvariable=self.top_k, width=8).grid(row=0, column=1)
 
-        self.btn_toggle = tk.Button(self.root, text="START MIKROFON", bg="#4CAF50", fg="white", font=("Helvetica", 11, "bold"), command=self.toggle_mic)
+        self.btn_toggle = tk.Button(self.root, text="START MIC", bg="#4CAF50", fg="white", font=("Helvetica", 11, "bold"), command=self.toggle_mic)
         self.btn_toggle.pack(pady=10, ipadx=20)
         
-        enroll_frame = ttk.LabelFrame(self.root, text="Registracija (60s duboka analiza)")
+        enroll_frame = ttk.LabelFrame(self.root, text="Add new person (60s)")
         enroll_frame.pack(pady=10, fill="x", padx=20)
         self.new_name = tk.StringVar()
         ttk.Entry(enroll_frame, textvariable=self.new_name, width=20).pack(side="left", padx=10, pady=10)
-        self.btn_enroll = ttk.Button(enroll_frame, text="Započni Enrollment", command=self.enroll_voice)
+        self.btn_enroll = ttk.Button(enroll_frame, text="Start Enrollment", command=self.enroll_voice)
         self.btn_enroll.pack(side="left", padx=5)
 
         self.progress = ttk.Progressbar(self.root, orient="horizontal", length=400, mode="determinate")
@@ -127,14 +127,14 @@ class VoiceApp:
             try:
                 self.selected_mic_id = int(self.mic_selector.get().split(":")[0])
                 self.is_running = True
-                self.btn_toggle.config(text="STOP MIKROFON", bg="#f44336")
+                self.btn_toggle.config(text="STOP MIC", bg="#f44336")
                 threading.Thread(target=self.mic_loop, daemon=True).start()
-                self.log(f"Inference pokrenut na mic ID {self.selected_mic_id}")
+                self.log(f"Inference started on mic ID {self.selected_mic_id}")
             except:
-                messagebox.showerror("Greška", "Odaberi mikrofon!")
+                messagebox.showerror("Error", "Pick a mic!")
         else:
             self.is_running = False
-            self.btn_toggle.config(text="START MIKROFON", bg="#4CAF50")
+            self.btn_toggle.config(text="START MIC", bg="#4CAF50")
 
     def preprocess_audio(self, audio_np):
         waveform = torch.from_numpy(audio_np).float().unsqueeze(0)
@@ -155,7 +155,7 @@ class VoiceApp:
                 audio_np = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
                 
                 if np.max(np.abs(audio_np)) < VAD_THRESHOLD:
-                    self.root.after(0, lambda: self.pred_label.config(text="STATUS: TIŠINA", foreground="gray"))
+                    self.root.after(0, lambda: self.pred_label.config(text="STATUS: SILENCE", foreground="gray"))
                     continue
 
                 spec = self.preprocess_audio(audio_np)
@@ -181,21 +181,21 @@ class VoiceApp:
                         total_w = sum(weighted_votes.values())
                         conf = (weighted_votes[winner] / total_w) * 100
                         self.root.after(0, lambda w=winner, c=conf: self.pred_label.config(
-                            text=f"OSOBA: {w} ({c:.1f}% siguran)", foreground="#2E7D32"))
+                            text=f"Person: {w} ({c:.1f}% sure)", foreground="#2E7D32"))
                     else:
-                        self.root.after(0, lambda: self.pred_label.config(text="STATUS: NEPOZNATO", foreground="#C62828"))
+                        self.root.after(0, lambda: self.pred_label.config(text="STATUS: UNKNOWN", foreground="#C62828"))
             except: break
         stream.stop_stream(); stream.close()
 
     def enroll_voice(self):
         name = self.new_name.get().strip()
         if not name:
-            messagebox.showwarning("Ime?", "Moraš unijeti ime za registraciju.")
+            messagebox.showwarning("Name?", "Enter a name for enrollment.")
             return
             
         def record_and_process():
             self.root.after(0, lambda: self.btn_enroll.config(state="disabled"))
-            self.log(f"Započinjem snimanje 60s za {name}. Pričaj normalno...")
+            self.log(f"Starting recording 60s for {name}. Speak normally...")
             
             try:
                 mic_id = int(self.mic_selector.get().split(":")[0])
@@ -213,7 +213,7 @@ class VoiceApp:
                         self.root.after(0, lambda v=progress_val: self.progress.config(value=v))
                 
                 stream.stop_stream(); stream.close()
-                self.log("Snimanje gotovo. Obrađujem vektore...")
+                self.log("Recording finished. Processing vectors...")
                 
                 full_audio = np.frombuffer(b''.join(all_audio), dtype=np.int16).astype(np.float32) / 32768.0
                 
@@ -237,13 +237,13 @@ class VoiceApp:
                 with open(METADATA_NAME, 'wb') as f:
                     pickle.dump(self.metadata, f)
                 
-                self.log(f"Registracija završena! Dodano {added_count} vektora za {name}.")
+                self.log(f"Registration done! Added {added_count} vectors for {name}.")
                 self.root.after(0, lambda: self.progress.config(value=0))
                 self.root.after(0, lambda: self.btn_enroll.config(state="normal"))
                 self.new_name.set("")
                 
             except Exception as e:
-                self.log(f"Greška kod snimanja: {e}")
+                self.log(f"Error recording: {e}")
                 self.root.after(0, lambda: self.btn_enroll.config(state="normal"))
 
         threading.Thread(target=record_and_process, daemon=True).start()
