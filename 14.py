@@ -1,3 +1,37 @@
+"""
+VoiceNet Embedding Extractor: Triplet Learning Framework
+
+This script transforms a standard convolutional neural network (CNN) into a 
+discriminative feature extractor (embedding model) for voice verification. 
+
+Key architectural and procedural shifts implemented:
+
+1. Architecture Adaptation: The network's classification head (Softmax layer) 
+   is replaced with a linear 'Embedding Head' and an L2 normalization layer. 
+   Instead of predicting discrete classes, the model maps voice Mel-spectrograms 
+   into a 128-dimensional hypersphere where semantic similarity is measured 
+   by Euclidean distance.
+
+2. Triplet Loss Paradigm: We shift from Cross-Entropy to Triplet Margin Loss. 
+   During training, the model processes triplets: an 'Anchor' (sample A), 
+   a 'Positive' (another sample of the same speaker), and a 'Negative' 
+   (a sample from a different speaker). 
+
+3. Optimization Objective: The model is trained to minimize the distance 
+   between Anchor-Positive pairs while maximizing the distance between 
+   Anchor-Negative pairs by at least a predefined 'Margin' (1.0).
+
+4. Feature Transfer: The script supports partial weight loading, allowing 
+   the model to inherit spatial feature extraction capabilities from a 
+   pretrained classifier ('features' blocks) while fine-tuning the 
+   embedding space for verification tasks.
+
+The result is a model that can compare two previously unseen voices and 
+determine if they belong to the same person based on their spatial proximity 
+in the embedding manifold.
+"""
+
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
