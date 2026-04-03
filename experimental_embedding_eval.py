@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from tqdm import tqdm
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix, auc
 import pandas as pd
 
 # --- CONFIG ---
@@ -18,8 +18,13 @@ SAMPLE_RATE = 16000
 EMBEDDING_DIM = 128
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# --- NOVI SIGURNOSNI PARAMETAR ---
+# Postavljamo na 0.22 jer graf pokazuje da tu FP (rizik) skoro ne postoji, 
+# a TP (pogodak) je i dalje vrlo visok.
+PRODUCTION_THRESHOLD = 0.22 
+
 def get_run_folder():
-    base = "threshold_sweep_"
+    base = "threshold_sweep_strict_"
     counter = 1
     while os.path.exists(f"{base}{counter}"): counter += 1
     folder = f"{base}{counter}"
@@ -28,7 +33,7 @@ def get_run_folder():
 
 RUN_FOLDER = get_run_folder()
 
-# --- MODEL ---
+# --- MODEL DEFINITION ---
 class VoiceNetEmbedding(torch.nn.Module):
     def __init__(self, embedding_dim=128):
         super().__init__()
@@ -68,7 +73,7 @@ def sweep_thresholds():
     model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
     model.eval()
 
-    print(f"🚀 Pokrećem Full Sweep u: {RUN_FOLDER}")
+    print(f"🚀 Pokrećem STROGU evaluaciju u: {RUN_FOLDER}")
 
     person_ids = sorted([d for d in os.listdir(DATASET_DIR) if os.path.isdir(os.path.join(DATASET_DIR, d))])
     person_data = {p_id: v for p_id in person_ids if len(v := sorted([v for v in glob.glob(os.path.join(DATASET_DIR, p_id, "*")) if os.path.isdir(v)])) > 1}
@@ -97,10 +102,9 @@ def sweep_thresholds():
         for i in range(len(query_labels)):
             all_results.append({'true': query_labels[i], 'pred_raw': gallery_labels[I[i][0]], 'dist': D[i][0]})
 
-    thresholds = np.arange(0.1, 1.1, 0.1)
+    # Detaljniji sweep oko niske zone
+    thresholds = np.linspace(0.01, 0.8, 80)
     sweep_data = []
-    best_f1 = -1
-    best_t = 0.3
 
     for t in thresholds:
         y_true, y_pred = [], []
@@ -110,48 +114,48 @@ def sweep_thresholds():
         
         acc = accuracy_score(y_true, y_pred)
         p, r, f1, _ = precision_recall_fscore_support(y_true, y_pred, average='weighted', zero_division=0)
-        
-        if f1 > best_f1:
-            best_f1 = f1
-            best_t = t
+        tp = sum(1 for gt, pr in zip(y_true, y_pred) if gt == pr and pr != "unknown")
+        fp = sum(1 for gt, pr in zip(y_true, y_pred) if gt != pr and pr != "unknown")
+        fn = sum(1 for gt, pr in zip(y_true, y_pred) if pr == "unknown")
         
         sweep_data.append({
-            'Threshold': round(t, 2), 'Accuracy': acc, 'Precision': p, 'Recall': r, 'F1': f1,
-            'TP': sum(1 for gt, pr in zip(y_true, y_pred) if gt == pr and pr != "unknown"),
-            'FP': sum(1 for gt, pr in zip(y_true, y_pred) if gt != pr and pr != "unknown"),
-            'FN': sum(1 for gt, pr in zip(y_true, y_pred) if pr == "unknown")
+            'Threshold': round(t, 4), 'Accuracy': acc, 'Precision': p, 'Recall': r, 'F1': f1,
+            'TP': tp, 'FP': fp, 'FN': fn
         })
 
-    # --- SAVE CSV & PLOTS ---
     df = pd.DataFrame(sweep_data)
-    print("\n" + df.to_string(index=False))
     df.to_csv(f"{RUN_FOLDER}/sweep_results.csv", index=False)
 
-    # Plot performance
-    plt.figure(figsize=(10, 5))
-    plt.plot(df['Threshold'], df['Accuracy'], label='Accuracy', marker='o')
-    plt.plot(df['Threshold'], df['F1'], label='F1 Score', marker='s')
-    plt.title(f"Performance Sweep (Best T: {round(best_t, 2)})")
-    plt.grid(True); plt.legend(); plt.savefig(f"{RUN_FOLDER}/performance_sweep.png")
+    # --- ROC CURVE ---
+    tpr = df['Recall']
+    fpr = df['FP'] / (df['FP'].max() if df['FP'].max() > 0 else 1)
+    roc_auc = auc(fpr, tpr)
 
-    # --- PLOT CONFUSION MATRIX FOR BEST THRESHOLD ---
-    y_true_best, y_pred_best = [], []
+    plt.figure(figsize=(8, 8))
+    plt.plot(fpr, tpr, color='green', lw=2, label=f'ROC (AUC = {roc_auc:.4f})')
+    plt.plot([0, 1], [0, 1], color='navy', linestyle='--')
+    plt.title('ROC - Fokus na sigurnost')
+    plt.legend(); plt.savefig(f"{RUN_FOLDER}/roc_curve.png"); plt.close()
+
+    # --- MATRICA KONFUZIJE ZA STROGI PRAG ---
+    y_true_strict, y_pred_strict = [], []
     for res in all_results:
-        y_true_best.append(res['true'])
-        y_pred_best.append(res['pred_raw'] if res['dist'] < best_t else "unknown")
+        y_true_strict.append(res['true'])
+        y_pred_strict.append(res['pred_raw'] if res['dist'] < PRODUCTION_THRESHOLD else "unknown")
 
-    # Uzmi sve ID-ove da graf ne bude pretrpan
     top_ids = sorted(list(person_data.keys()))
-    cm = confusion_matrix(y_true_best, y_pred_best, labels=top_ids + ["unknown"])
-    
+    cm = confusion_matrix(y_true_strict, y_pred_strict, labels=top_ids + ["unknown"])
     plt.figure(figsize=(14, 10))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
-                xticklabels=top_ids + ["unknown"], yticklabels=top_ids)
-    plt.title(f"Confusion Matrix for Best Threshold ({round(best_t, 2)})")
-    plt.ylabel('Actual'); plt.xlabel('Predicted')
-    plt.savefig(f"{RUN_FOLDER}/best_threshold_cm.png")
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Reds', xticklabels=top_ids + ["unknown"], yticklabels=top_ids)
+    plt.title(f"Stroga Matrica Konfuzije (Threshold = {PRODUCTION_THRESHOLD})")
+    plt.savefig(f"{RUN_FOLDER}/strict_confusion_matrix.png")
+
+    # --- FINALNI PRINT ---
+    print(f"\n📊 REPORT ZA PRAG {PRODUCTION_THRESHOLD}:")
+    row = df.iloc[(df['Threshold']-PRODUCTION_THRESHOLD).abs().argsort()[:1]]
+    print(row[['Threshold', 'Accuracy', 'TP', 'FP', 'FN']].to_string(index=False))
     
-    print(f"\n✅ Gotovo! Najbolji prag {round(best_t, 2)} spremljen u matricu.")
+    print(f"\n✅ Rezultati spremljeni u {RUN_FOLDER}")
 
 if __name__ == "__main__":
     sweep_thresholds()
